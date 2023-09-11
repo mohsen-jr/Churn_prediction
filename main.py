@@ -1,7 +1,9 @@
 import joblib
 import numpy as np
 import streamlit as st
+from ColumnSelector import ColumnSelector
 from utils import process_new
+
 
 
 ## Loading the Model

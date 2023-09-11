@@ -1,7 +1,8 @@
 ## main
-import pandas as pd
 import numpy as np
+import pandas as pd
 import joblib
+import pickle
 
 
 
@@ -30,11 +31,12 @@ df = read_data(DF_PATH)
 df = feature_eng(df)
 X_total = df.drop(columns=['customer_status', 'gender', 'enrolled_services'])
 
+all_pipeline = joblib.load('models/pipeline.pkl')
 
 ## The Function to process new instances
 def process_new(X_new):
     
-    all_pipeline = joblib.load('models/pipeline.pkl')
+    
     ## To DF
     df_new = pd.DataFrame([X_new])
     df_new.columns = X_total.columns
