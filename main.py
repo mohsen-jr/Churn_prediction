@@ -1,7 +1,6 @@
 import joblib
 import numpy as np
 import streamlit as st
-import os
 from utils import process_new
 
 

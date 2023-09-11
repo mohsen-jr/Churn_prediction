@@ -1,97 +1,34 @@
 ## main
 import pandas as pd
 import numpy as np
-import os
 import joblib
 
-## skelarn -- preprocessing
-from sklearn.model_selection import train_test_split
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OneHotEncoder, MinMaxScaler, OrdinalEncoder
-from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn_features.transformers import DataFrameSelector
+
 
 ## Reading Data
 DF_PATH = r"data/raw/explored_df.pkl"
-TRAIN_PATH = os.path.join(os.getcwd(), DF_PATH)
-df = pd.read_pickle(TRAIN_PATH)
-df.reset_index(inplace=True, drop=True)
+def read_data(PATH):
+    
+    df = pd.read_pickle(PATH)
+    df.reset_index(inplace=True, drop=True)
+    return df
 
-## 
-cols = ['online_security', 'online_backup', 'device_protection_plan',
-         'premium_tech_support', 'streaming_tv', 'streaming_movies','streaming_music']
-DICT_REPLACE = {'Yes': 1, 'No': 0}
-df_internet = df[cols].replace(DICT_REPLACE)
-df_internet['enrolled_services'] = np.sum(df_internet, axis=1)
-df['enrolled_services'] = df_internet['enrolled_services']
 
-## To features and target
+## feature engineering ---> create new column called "enrolled_services"
+def feature_eng(df):
+    cols = ['online_security', 'online_backup', 'device_protection_plan',
+            'premium_tech_support', 'streaming_tv', 'streaming_movies','streaming_music']
+    DICT_REPLACE = {'Yes': 1, 'No': 0}
+    df_internet = df[cols].replace(DICT_REPLACE)
+    df_internet['enrolled_services'] = np.sum(df_internet, axis=1)
+    df['enrolled_services'] = df_internet['enrolled_services']
+    return df
+
+
+## To get features' names
+df = read_data(DF_PATH)
+df = feature_eng(df)
 X_total = df.drop(columns=['customer_status', 'gender', 'enrolled_services'])
-X = df.drop(columns=['customer_status', 'gender', 'online_security', 'online_backup', 'device_protection_plan',
-       'premium_tech_support', 'streaming_tv', 'streaming_movies', 'streaming_music'])
-y = df['customer_status']
-
-## Split to train and test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True, random_state=42, stratify=y)
-
-## Slice the lists
-num_cols = ['age', 'number_of_dependents', 'number_of_referrals', 'tenure_in_months', 'avg_monthly_long_distance_charges',
-            'avg_monthly_gb_download', 'total_revenue', 'enrolled_services']
-
-cat_cols = ['married', 'phone_service', 'multiple_lines', 'internet_service', 'unlimited_data', 'paperless_billing', 'offer', 'payment_method']
-
-ord_cols_1 = ['internet_type']
-ord_cols_2 = ['contract']
-
-
-
-## Pipeline
-## Numerical: num_cols --> Imputing using median, and standardscaler
-## Categorical: cat_cols ---> Imputing using mode, and OHE
-## Ordinal: ord_cols_1, ord_cols_2 ---> Imputing using mode, and ordinalEncoder
-
-## For Numerical
-num_pipeline = Pipeline(steps=[
-                        ('selector', DataFrameSelector(num_cols)),
-                        ('imputer', SimpleImputer(strategy='median')),
-                        ('scaler', MinMaxScaler())
-                    ])
-
-
-## For Categorical
-cat_pipeline = Pipeline(steps=[
-                        ('selector', DataFrameSelector(cat_cols)),
-                        ('imputer', SimpleImputer(strategy='most_frequent')),
-                        ('ohe', OneHotEncoder(drop='first', sparse_output=False))
-                    ])
-
-
-## For ord_cols_1
-ordinal_pipeline_1 = Pipeline(steps=[
-                        ('selector', DataFrameSelector(ord_cols_1)),
-                        ('imputer', SimpleImputer(strategy='most_frequent')),
-                        ('encoder',OrdinalEncoder(categories=[['No', 'Cable', 'DSL', 'Fiber Optic']]))
-                    ])
-
-
-## For ord_cols_1
-ordinal_pipeline_2 = Pipeline(steps=[
-                        ('selector', DataFrameSelector(ord_cols_2)),
-                        ('imputer', SimpleImputer(strategy='most_frequent')),
-                        ('encoder',OrdinalEncoder(categories=[['Month-to-Month', 'One Year', 'Two Year']]))
-                    ])
-
-
-## combine all
-all_pipeline = FeatureUnion(transformer_list=[
-                                    ('numerical', num_pipeline),
-                                    ('categorical', cat_pipeline),
-                                    ('ord_1', ordinal_pipeline_1),
-                                    ('ord_2', ordinal_pipeline_2)
-                                ])
-
-## apply
-all_pipeline.fit_transform(X_train)
 
 
 ## The Function to process new instances
@@ -129,13 +66,8 @@ def process_new(X_new):
     df_new['total_revenue'] = df_new['total_revenue'].astype('float64')
 
 
-    ## If you make feature engineering
-    cols = ['online_security', 'online_backup', 'device_protection_plan',
-         'premium_tech_support', 'streaming_tv', 'streaming_movies','streaming_music']
-    DICT_REPLACE = {'Yes': 1, 'No': 0}
-    df_internet = df[cols].replace(DICT_REPLACE)
-    df_internet['enrolled_services'] = np.sum(df_internet, axis=1)
-    df_new['enrolled_services'] = df_internet['enrolled_services']
+    ## Feature engineering
+    df_new = feature_eng(df_new)
     
     ## Call the pipeline
     X_processed = all_pipeline.transform(df_new)
